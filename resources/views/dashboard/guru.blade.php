@@ -31,7 +31,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <!-- Total Ujian Card -->
       <div
         class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
@@ -107,6 +107,12 @@
           class="absolute bottom-0 left-0 right-0 h-1 bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-b-xl"
         ></div>
       </div>
+
+      <!-- Weather Widget -->
+      <x-weather-widget 
+        :weather="$weatherData['weather'] ?? null" 
+        :city="$weatherData['city'] ?? 'Padang'" 
+      />
     </div>
 
     <!-- Quick Actions -->

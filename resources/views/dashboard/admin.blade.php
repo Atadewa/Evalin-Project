@@ -114,6 +114,24 @@
         </div>
       </div>
 
+      <!-- Weather Information Section -->
+      <div class="mb-10">
+        <h2
+          class="text-lg font-semibold text-gray-600 uppercase tracking-wide mb-4"
+        >
+          Informasi Cuaca
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <!-- Weather Widget -->
+          <div class="lg:col-span-2">
+            <x-weather-widget 
+              :weather="$weatherData['weather'] ?? null" 
+              :city="$weatherData['city'] ?? 'Padang'" 
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- Overview Section -->
       <h2
         class="text-lg font-semibold text-gray-600 uppercase tracking-wide mb-4"

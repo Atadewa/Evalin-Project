@@ -9,6 +9,7 @@ use App\Http\Controllers\Guru\UjianController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Guru\SoalController;
 use App\Http\Controllers\Siswa\UjianController as SiswaUjianController;
+use App\Http\Controllers\WeatherController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -57,4 +58,6 @@ Route::middleware(['auth', 'role:siswa'])->group(function () {
     Route::post('siswa/ujian/selesaikan', [SiswaUjianController::class, 'selesaikanUjian'])->name('siswa.ujian.selesaikan');
     Route::get('siswa/ujian/{ujian}/hasil', [SiswaUjianController::class, 'hasil'])->name('siswa.ujian.hasil');
 });
+
+Route::get('/weather', [WeatherController::class, 'padangWeather']);
 require __DIR__ . '/auth.php';

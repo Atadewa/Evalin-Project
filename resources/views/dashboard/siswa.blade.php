@@ -87,6 +87,17 @@
       </div>
     </div>
 
+    <!-- Weather Info Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Weather Widget -->
+      <x-weather-widget 
+        :weather="$weatherData['weather'] ?? null" 
+        :city="$weatherData['city'] ?? 'Padang'" 
+      />
+      
+      <!-- Additional info cards can be added here in the future -->
+    </div>
+
     {{-- Main Content Grid --}}
     {{--
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
