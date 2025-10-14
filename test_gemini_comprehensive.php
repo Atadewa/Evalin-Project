@@ -1,23 +1,22 @@
 <?php
 
-// Test comprehensive Gemini scoring
+// Test comprehensive Phi-3-mini scoring
 require_once 'vendor/autoload.php';
 
 // Load environment variables
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$apiKey = $_ENV['GEMINI_API_KEY'] ?? null;
+$apiKey = $_ENV['PHI3_API_KEY'] ?? null;
 
 if (!$apiKey) {
-    echo "GEMINI_API_KEY tidak ditemukan dalam file .env\n";
+    echo "PHI3_API_KEY tidak ditemukan dalam file .env\n";
     exit(1);
 }
 
-function testGeminiScoring($soal, $kunci, $jawaban, $skorMaksimal) {
-    global $apiKey;
-
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKey;
+function testPhi3Scoring($soal, $kunci, $jawaban, $skorMaksimal) {
+    // For local Phi3 service use localhost endpoint (adjust if different)
+    $endpoint = 'http://10.138.0.4:11434/api/generate';
 
     $prompt = "Anda adalah sistem penilaian otomatis untuk ujian essay. Berikan penilaian yang akurat berdasarkan kriteria berikut:
 
@@ -64,8 +63,25 @@ NILAI:";
         return "HTTP Error: $httpCode";
     }
 
-    $data = json_decode($response, true);
-    $responseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    // Try to parse NDJSON or structured responses
+    $responseText = '';
+    $decoded = json_decode($response, true);
+    if (is_array($decoded) && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
+        $responseText = $decoded['candidates'][0]['content']['parts'][0]['text'];
+    } else {
+        // fallback to raw body or NDJSON lines
+        $lines = preg_split('/\R/', $response);
+        $parts = [];
+        foreach ($lines as $ln) {
+            $ln = trim($ln);
+            if ($ln === '') continue;
+            $j = json_decode($ln, true);
+            if ($j && isset($j['response'])) $parts[] = $j['response'];
+            elseif ($j && isset($j['text'])) $parts[] = $j['text'];
+            else $parts[] = $ln;
+        }
+        $responseText = implode('', $parts);
+    }
 
     // Extract numeric value
     if (preg_match('/(\d+(?:\.\d+)?)/', $responseText, $matches)) {
@@ -75,7 +91,7 @@ NILAI:";
     }
 }
 
-echo "=== TESTING GEMINI SCORING SYSTEM ===\n\n";
+echo "=== TESTING PHI-3-MINI SCORING SYSTEM ===\n\n";
 
 // Test cases
 $testCases = [
@@ -124,7 +140,7 @@ foreach ($testCases as $i => $test) {
     echo "Skor Maksimal: {$test['skorMaksimal']}\n";
     echo "Expected: {$test['expected']}\n";
 
-    $score = testGeminiScoring($test['soal'], $test['kunci'], $test['jawaban'], $test['skorMaksimal']);
+    $score = testPhi3Scoring($test['soal'], $test['kunci'], $test['jawaban'], $test['skorMaksimal']);
 
     echo "Result: $score\n";
     echo "Status: " . (is_numeric($score) ? "✓ SUCCESS" : "✗ FAILED") . "\n";

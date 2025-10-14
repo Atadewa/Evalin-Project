@@ -32,7 +32,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::middleware(['auth', 'role:guru'])->group(function () {
     Route::post('guru/siswa/import', [SiswaController::class, 'import'])->name('guru.siswa.import');
     Route::resource('guru/siswa', SiswaController::class)->names('guru.siswa');
-    
+
     // Ujian routes
     Route::get('guru/ujian/koreksi/{ujianid}/{siswaid}', [UjianController::class, 'koreksiUjianSiswaPersiswa'])->name('guru.ujian.koreksi-persiswa');
     Route::get('guru/ujian/koreksi/{ujianid}/{siswaid}', [UjianController::class, 'koreksiUjianSiswaPersiswa'])->name('guru.ujian.show.koreksiUjianSiswaPersiswa'); // Nama route lama untuk compatibility
@@ -45,7 +45,7 @@ Route::middleware(['auth', 'role:guru'])->group(function () {
     Route::post('guru/ujian/{ujian}/publish', [UjianController::class, 'publish'])->name('guru.ujian.publish');
     Route::post('guru/ujian/{ujian}/unpublish', [UjianController::class, 'unpublish'])->name('guru.ujian.unpublish');
     Route::resource('guru/ujian', UjianController::class)->names('guru.ujian');
-    
+
     // Soal routes with ujian_id
     Route::get('guru/soal/create', [SoalController::class, 'create'])->name('guru.soal.create');
     Route::post('guru/soal/import', [SoalController::class, 'import'])->name('admin.soal.import');
@@ -54,6 +54,8 @@ Route::middleware(['auth', 'role:guru'])->group(function () {
 
 Route::middleware(['auth', 'role:siswa'])->group(function () {
     Route::resource('siswa/ujian', SiswaUjianController::class,)->names('siswa.ujian');
+    // Endpoint for syncing offline drafts from PWA
+    Route::post('siswa/ujian/sync-draft', [SiswaUjianController::class, 'syncDraft'])->name('siswa.ujian.sync-draft');
     Route::post('siswa/ujian/simpan-jawaban', [SiswaUjianController::class, 'simpanJawaban'])->name('siswa.ujian.simpan-jawaban');
     Route::post('siswa/ujian/selesaikan', [SiswaUjianController::class, 'selesaikanUjian'])->name('siswa.ujian.selesaikan');
     Route::get('siswa/ujian/{ujian}/hasil', [SiswaUjianController::class, 'hasil'])->name('siswa.ujian.hasil');

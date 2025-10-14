@@ -69,7 +69,6 @@ class UjianController extends Controller
                             $studentStartTime = Carbon::parse($ujianSiswa->waktu_mulai, 'Asia/Jakarta');
                             $examDurationMinutes = ($ujian->durasi_jam * 60) + $ujian->durasi_menit;
                             $studentEndTime = $studentStartTime->copy()->addMinutes($examDurationMinutes);
-
                             if ($now->gt($studentEndTime)) {
                                 $status = 'ended';
                             } else {
@@ -196,7 +195,7 @@ class UjianController extends Controller
         $request->validate([
             'soal_id' => 'required|exists:soal,id',
             'ujian_id' => 'required|exists:ujian,id',
-            'jawaban_dipilih' => 'nullable|string',
+            'jawaban_teks' => 'nullable|string',
         ]);
 
         $siswa = Siswa::where('user_id', Auth::id())->firstOrFail();
@@ -206,7 +205,7 @@ class UjianController extends Controller
             'ujian_id' => $request->ujian_id,
             'siswa_id' => $siswa->id,
             'soal_id' => $soal->id,
-            'jawaban_dipilih' => $request->jawaban_dipilih,
+            'jawaban_teks' => $request->jawaban_teks,
             'waktu_dijawab' => now(),
         ];
 
@@ -214,14 +213,14 @@ class UjianController extends Controller
         if ($soal->tipe_soal === 'pilgan') {
             // Multiple choice answer - find opsi_id if it exists
             $opsiJawaban = OpsiJawaban::where('soal_id', $soal->id)
-                                     ->where('teks_opsi', $request->jawaban_dipilih)
-                                     ->first();
+                ->where('teks_opsi', $request->jawaban_teks)
+                ->first();
             $jawabanData['opsi_id'] = $opsiJawaban ? $opsiJawaban->id : null;
             $jawabanData['jawaban_teks'] = null;
         } else {
             // Essay answer
             $jawabanData['opsi_id'] = null;
-            $jawabanData['jawaban_teks'] = $request->jawaban_dipilih;
+            $jawabanData['jawaban_teks'] = $request->jawaban_teks;
         }
 
         JawabanSiswa::updateOrCreate(
@@ -233,6 +232,92 @@ class UjianController extends Controller
         );
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Sync draft answers submitted by PWA when device comes back online.
+     * Expected payload: { ujian_id: int, drafts: [{ soal_id, jawaban_teks, opsi_id?, waktu_dijawab }] }
+     */
+    public function syncDraft(Request $request)
+    {
+        $request->validate([
+            'ujian_id' => 'required|integer|exists:ujian,id',
+            'drafts' => 'required|array',
+            'drafts.*.soal_id' => 'required|integer|exists:soal,id',
+            'drafts.*.jawaban_teks' => 'nullable|string',
+            'drafts.*.opsi_id' => 'nullable|integer',
+            'drafts.*.waktu_dijawab' => 'nullable|date'
+        ]);
+
+        $siswa = Siswa::where('user_id', Auth::id())->firstOrFail();
+        $ujian = Ujian::findOrFail($request->ujian_id);
+
+        // Basic anti-cheating: ensure ujian is published and student is allowed
+        if (!$ujian->is_published) {
+            return response()->json(['success' => false, 'message' => 'Ujian tidak tersedia untuk sinkronisasi.'], 403);
+        }
+
+        // Check exam period boundaries
+        $now = Carbon::now('Asia/Jakarta');
+        $startTime = Carbon::parse($ujian->jadwal, 'Asia/Jakarta');
+        $examPeriodEndTime = Carbon::parse($ujian->waktu_selesai, 'Asia/Jakarta');
+
+        if ($now->gt($examPeriodEndTime)) {
+            return response()->json(['success' => false, 'message' => 'Periode ujian sudah berakhir, tidak dapat sinkronisasi.'], 403);
+        }
+
+        $saved = 0;
+        DB::beginTransaction();
+        try {
+            foreach ($request->drafts as $d) {
+                $soal = Soal::find($d['soal_id']);
+                if (!$soal) continue;
+
+                // If soal does not belong to this ujian, skip
+                if ($soal->ujian_id != $ujian->id) continue;
+
+                $jawabanData = [
+                    'ujian_id' => $ujian->id,
+                    'siswa_id' => $siswa->id,
+                    'soal_id' => $soal->id,
+                    'waktu_dijawab' => isset($d['waktu_dijawab']) ? Carbon::parse($d['waktu_dijawab']) : now(),
+                ];
+
+                if ($soal->tipe_soal === 'pilgan') {
+                    // Prefer opsi_id if provided, otherwise try lookup by teks
+                    if (!empty($d['opsi_id'])) {
+                        $jawabanData['opsi_id'] = $d['opsi_id'];
+                        $jawabanData['jawaban_teks'] = null;
+                    } else {
+                        $jawabanData['jawaban_teks'] = $d['jawaban_teks'] ?? null;
+                        $opsiJawaban = OpsiJawaban::where('soal_id', $soal->id)
+                            ->where('teks_opsi', $jawabanData['jawaban_teks'])
+                            ->first();
+                        $jawabanData['opsi_id'] = $opsiJawaban ? $opsiJawaban->id : null;
+                        $jawabanData['jawaban_teks'] = null;
+                    }
+                } else {
+                    $jawabanData['opsi_id'] = null;
+                    $jawabanData['jawaban_teks'] = $d['jawaban_teks'] ?? null;
+                }
+
+                JawabanSiswa::updateOrCreate(
+                    [
+                        'siswa_id' => $siswa->id,
+                        'soal_id' => $soal->id,
+                    ],
+                    $jawabanData
+                );
+                $saved++;
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Error saat sinkronisasi draft PWA: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat sinkronisasi.'], 500);
+        }
+
+        return response()->json(['success' => true, 'saved' => $saved]);
     }
 
 
@@ -301,19 +386,6 @@ class UjianController extends Controller
         $totalNilaiAi = 0;
         $totalSoal = $semuaJawaban->count();
         $skorPerEsai = round(100 / $totalSoal, 2);
-
-        if (!$apiKey) {
-            Log::error('GEMINI_API_KEY tidak ditemukan. Menandai ujian selesai tanpa penilaian.');
-            UjianSiswa::updateOrCreate(
-                ['ujian_id' => $ujianId, 'siswa_id' => $siswa->id],
-                ['status' => 'selesai']
-            );
-            return response()->json([
-                'success' => true,
-                'message' => 'Ujian diselesaikan. Penilaian akan diproses kemudian.',
-                'redirect_url' => route('siswa.ujian.hasil', ['ujian' => $ujianId])
-            ]);
-        }
 
         // 3. Looping setiap jawaban untuk dinilai
         foreach ($semuaJawaban as $jawaban) {
@@ -392,58 +464,97 @@ class UjianController extends Controller
                 }
 
                 try {
-                    // Coba beberapa endpoint yang mungkin untuk Phi-3-mini
-                    $endpoints = [
-                        'http://10.138.0.4:11434/api/generate',
-                        'http://localhost:11434/api/generate',
-                        'http://127.0.0.1:11434/api/generate'
-                    ];
+                    // Use configurable Phi-3 endpoint. If deployed, set PHI3_ENDPOINT in .env to e.g. http://10.138.0.4:11434/api/generate
+                    $endpoint = env('PHI3_ENDPOINT', 'http://10.138.0.4:11434/api/generate');
 
                     // Log activity untuk monitoring di server
                     Log::info("Phi-3-mini sedang mengoreksi jawaban siswa ID: {$siswa->id}, Soal ID: {$jawaban->soal->id}");
 
                     // Tambahkan delay kecil untuk memberikan kesan AI sedang berpikir
-                    // Ini membantu agar popup terlihat lebih lama dan memberikan pengalaman yang lebih baik
                     usleep(500000); // 0.5 detik delay
 
-                    // 2. Kirim request dengan struktur body untuk Ollama
-                    // Coba setiap endpoint sampai salah satu berhasil
-                    $response = null;
-                    foreach ($endpoints as $currentEndpoint) {
-                        try {
-                            Log::info("Mencoba endpoint Phi-3-mini: {$currentEndpoint}");
-                            $response = Http::timeout(5)->post($currentEndpoint, [
-                                'model' => 'phi3:latest', // Menggunakan model phi-3-mini
-                                'prompt' => $prompt,
-                                'stream' => false,
-                            ]);
+                    // 2. Kirim request dengan struktur body untuk Ollama API
+                    Log::info("Mencoba endpoint Phi-3-mini: {$endpoint}");
 
-                            if ($response->successful()) {
-                                Log::info("Berhasil terhubung ke endpoint Phi-3-mini: {$currentEndpoint}");
-                                break; // Keluar dari loop jika berhasil
-                            }
-                        } catch (\Throwable $endpointError) {
-                            Log::warning("Gagal terhubung ke endpoint: {$currentEndpoint}. Error: " . $endpointError->getMessage());
-                            continue; // Coba endpoint berikutnya
-                        }
+                    $payload = [
+                        'model' => 'phi3:mini',
+                        'prompt' => $prompt,
+                        'stream' => false, // Disable streaming untuk response yang lebih mudah di-parse
+                    ];
+
+                    // Tingkatkan timeout ke 180 detik (3 menit) karena model inference bisa lama
+                    // Tambahkan retry mechanism dan connect timeout terpisah
+                    $response = Http::withHeaders([
+                        'Content-Type' => 'application/json',
+                        'Accept' => 'application/json'
+                    ])
+                    ->timeout(180) // Response timeout 3 menit
+                    ->connectTimeout(30) // Connection timeout 30 detik
+                    ->retry(2, 100) // Retry 2 kali dengan delay 100ms jika gagal
+                    ->post($endpoint, $payload);
+
+                    if ($response->successful()) {
+                        Log::info("Berhasil terhubung ke endpoint Phi-3-mini: {$endpoint}");
                     }
 
                     $nilaiPerSoalAi = 0;
                     if ($response && $response->successful()) {
-                        // 3. Cara mengambil teks dari response Gemini
-                        $responseText = $response->json('candidates.0.content.parts.0.text') ?? '';
+                        $body = $response->body();
+                        $responseText = '';
 
-                        Log::info("Full Response dari Gemini untuk jawaban ID {$jawaban->id}: " . $responseText);
+                        Log::info("Raw response body (first 500 chars): " . substr($body, 0, 500));
 
-                        // Bersihkan response text dari karakter non-numerik yang tidak perlu
+                        // Parse response dari Ollama API
+                        // Format 1: Single JSON object dengan key 'response' (jika stream=false berhasil)
+                        // Format 2: NDJSON - multiple JSON objects per line (jika server tetap streaming)
+
+                        // Coba decode sebagai single JSON object dulu
+                        $decoded = json_decode($body, true);
+
+                        if (is_array($decoded) && isset($decoded['response'])) {
+                            // Format single JSON: {"model":"phi3:mini","created_at":"...","response":"33.33","done":true,...}
+                            $responseText = $decoded['response'];
+                            Log::info("Parsed dari single JSON object, response: {$responseText}");
+                        } else {
+                            // Jika bukan single JSON, parse sebagai NDJSON (multiple JSON per line)
+                            // Contoh dari screenshot: setiap line adalah JSON object dengan field "response"
+                            $lines = explode("\n", $body);
+                            $tokens = [];
+
+                            foreach ($lines as $line) {
+                                $line = trim($line);
+                                if (empty($line)) continue;
+
+                                $lineData = json_decode($line, true);
+                                if (is_array($lineData)) {
+                                    // Ambil token dari field 'response'
+                                    if (isset($lineData['response'])) {
+                                        $tokens[] = $lineData['response'];
+                                    }
+
+                                    // Log jika sudah done
+                                    if (isset($lineData['done']) && $lineData['done'] === true) {
+                                        Log::info("Response streaming selesai (done=true)");
+                                    }
+                                }
+                            }
+
+                            // Gabungkan semua token menjadi response lengkap
+                            $responseText = implode('', $tokens);
+                            Log::info("Parsed dari NDJSON stream, total tokens: " . count($tokens) . ", response: {$responseText}");
+                        }
+
+                        Log::info("Final parsed response untuk jawaban ID {$jawaban->id}: " . substr($responseText, 0, 500));
+
+                        // Bersihkan response text dari whitespace
                         $cleanedText = trim($responseText);
 
                         // Cari pattern angka dengan berbagai format
                         if (preg_match('/(\d+(?:\.\d+)?)/', $cleanedText, $matches)) {
                             $nilaiDariApi = floatval($matches[1]);
-                            Log::info("Nilai yang diekstrak dari Gemini: {$nilaiDariApi}");
+                            Log::info("Nilai yang diekstrak dari API: {$nilaiDariApi}");
                         } else {
-                            Log::warning("Tidak dapat mengekstrak nilai dari response Gemini: '{$responseText}'");
+                            Log::warning("Tidak dapat mengekstrak nilai dari response API. Contoh tebal: '" . substr($cleanedText,0,200) . "'");
                             // Sebagai fallback, jika ada jawaban teks yang tidak kosong, berikan nilai proporsional
                             if (!empty(trim($jawaban->jawaban_teks))) {
                                 $nilaiDariApi = $skorPerEsai * 0.5; // 50% dari skor maksimal sebagai fallback
@@ -479,7 +590,7 @@ class UjianController extends Controller
                             Log::info("Jawaban ID: {$jawaban->id} dinilai dengan skor maksimal: {$nilaiPerSoalAi} (nilai API: {$nilaiDariApi})");
                         } else {
                             // Nilai negatif - invalid
-                            Log::warning("Nilai negatif dari Gemini untuk jawaban ID: {$jawaban->id}. Nilai: {$nilaiDariApi}");
+                            Log::warning("Nilai negatif dari model endpoint untuk jawaban ID: {$jawaban->id}. Nilai: {$nilaiDariApi}");
                             $nilaiPerSoalAi = 0;
                             $jawaban->update([
                                 'nilai_llama3' => 0,
@@ -488,7 +599,7 @@ class UjianController extends Controller
                             ]);
                         }
                     } else {
-                        Log::error("Request ke Gemini gagal untuk jawaban ID: {$jawaban->id}");
+                        Log::error("Request ke model endpoint gagal untuk jawaban ID: {$jawaban->id}");
                         if ($response) {
                             Log::error("Response status: " . $response->status());
                             Log::error("Response body: " . $response->body());

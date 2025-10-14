@@ -51,7 +51,7 @@
                                                 class="w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors duration-200"
                                                 id="jawaban_{{ $soal->id }}"
                                                 rows="6"
-                                                placeholder="Ketikkan jawaban Anda di sini...">{{ $soal->jawaban->jawaban_dipilih ?? '' }}</textarea>
+                                                placeholder="Ketikkan jawaban Anda di sini...">{{ $soal->jawaban->jawaban_teks ?? '' }}</textarea>
                                         </div>
                                     </div>
                                 @endforeach
@@ -102,7 +102,7 @@
                         <div class="grid grid-cols-5 gap-2" id="nomor-soal-nav">
                             @foreach ($ujian->soals as $index => $soal)
                                 @php
-                                    $jawabanAda = !empty($soal->jawaban->jawaban_dipilih);
+                                    $jawabanAda = !empty($soal->jawaban->jawaban_teks);
                                 @endphp
                                 <button type="button"
                                     class="nomor-soal-btn w-10 h-10 text-sm font-medium rounded-lg border-2 transition-all duration-200 {{ $jawabanAda ? 'bg-green-100 border-green-500 text-green-700 hover:bg-green-200' : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100' }}"
@@ -312,7 +312,7 @@
                     body: JSON.stringify({
                         soal_id: soalId,
                         ujian_id: "{{ $ujian->id }}",
-                        jawaban_dipilih: jawaban
+                        jawaban_teks: jawaban
                     })
                 }).then(res => res.json())
                 .then(data => {

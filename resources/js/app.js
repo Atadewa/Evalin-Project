@@ -98,3 +98,141 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 500);
   }
 });
+
+// --- PWA: Service Worker registration and offline draft sync ---
+(function () {
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function (reg) {
+          console.log('ServiceWorker registration successful with scope: ', reg.scope);
+        }).catch(function (err) {
+          console.warn('ServiceWorker registration failed: ', err);
+        });
+    });
+  }
+
+  // Minimal IndexedDB wrapper for drafts
+  const DB_NAME = 'evalin-pwa';
+  const STORE_NAME = 'drafts';
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function (e) {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = function (e) { resolve(e.target.result); };
+      req.onerror = function (e) { reject(e.target.error); };
+    });
+  }
+
+  async function saveDraft(ujianId, soalId, payload) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const item = { ujian_id: ujianId, soal_id: soalId, payload, created_at: new Date().toISOString() };
+      const req = store.add(item);
+      req.onsuccess = () => resolve(true);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async function getAllDrafts() {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async function clearDrafts(ids) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      let remaining = ids.length;
+      if (remaining === 0) return resolve();
+      ids.forEach(id => {
+        const req = store.delete(id);
+        req.onsuccess = () => { remaining--; if (remaining === 0) resolve(); };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    });
+  }
+
+  // Hook example: when student answers a question, save draft locally and attempt immediate sync
+  // Integrate this with your existing exam page logic: call pwaSaveAnswer when answer changes
+  window.pwaSaveAnswer = async function (ujianId, soalId, data) {
+    try {
+      await saveDraft(ujianId, soalId, data);
+      // Try to sync immediately if online
+      if (navigator.onLine) {
+        await pwaSyncDrafts();
+      }
+    } catch (e) {
+      console.error('Gagal menyimpan draft PWA:', e);
+    }
+  };
+
+  // Sync drafts to server
+  window.pwaSyncDrafts = async function () {
+    try {
+      const drafts = await getAllDrafts();
+      if (!drafts.length) return;
+
+      // Group drafts by ujian_id
+      const grouped = drafts.reduce((acc, d) => {
+        acc[d.ujian_id] = acc[d.ujian_id] || [];
+        acc[d.ujian_id].push({ id: d.id, soal_id: d.soal_id, ...d.payload });
+        return acc;
+      }, {});
+
+      const savedIds = [];
+      for (const ujianId of Object.keys(grouped)) {
+        const body = { ujian_id: ujianId, drafts: grouped[ujianId].map(x => ({ soal_id: x.soal_id, jawaban_teks: x.jawaban_teks, opsi_id: x.opsi_id, waktu_dijawab: x.waktu_dijawab })) };
+
+        // Send via fetch to Laravel route - include CSRF token from meta if available
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const res = await fetch('/siswa/ujian/sync-draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'X-CSRF-TOKEN': token } : {})
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          // clear those draft ids
+          grouped[ujianId].forEach(x => savedIds.push(x.id));
+        } else {
+          console.warn('Sync draft failed for ujian', ujianId, await res.text());
+        }
+      }
+
+      if (savedIds.length) await clearDrafts(savedIds);
+      return true;
+    } catch (e) {
+      console.error('Error during PWA draft sync:', e);
+      return false;
+    }
+  };
+
+  // Sync when coming online
+  window.addEventListener('online', () => {
+    console.log('Koneksi kembali - mencoba sinkronisasi draft...');
+    window.pwaSyncDrafts();
+  });
+
+})();
+

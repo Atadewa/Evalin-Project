@@ -1,6 +1,6 @@
 <?php
 
-// Test Gemini API
+// Test Phi-3-mini API
 require_once 'vendor/autoload.php';
 
 use Illuminate\Support\Facades\Http;
@@ -9,14 +9,14 @@ use Illuminate\Support\Facades\Http;
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$apiKey = $_ENV['GEMINI_API_KEY'] ?? null;
+$apiKey = $_ENV['PHI3_API_KEY'] ?? null;
 
 if (!$apiKey) {
-    echo "GEMINI_API_KEY tidak ditemukan dalam file .env\n";
+    echo "PHI3_API_KEY tidak ditemukan dalam file .env\n";
     exit(1);
 }
 
-$endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKey;
+$endpoint = 'http://127.0.0.1:11434/api/generate';
 
 $prompt = "Anda adalah sistem penilaian otomatis untuk ujian essay. Berikan penilaian yang akurat berdasarkan kriteria berikut:
 
@@ -37,7 +37,7 @@ INSTRUKSI: Berikan HANYA angka penilaian (contoh: 25 atau 15.5 atau 0), tanpa te
 
 NILAI:";
 
-echo "Testing Gemini API...\n";
+echo "Testing Phi-3-mini API...\n";
 echo "Endpoint: $endpoint\n";
 echo "Prompt: " . substr($prompt, 0, 100) . "...\n\n";
 
