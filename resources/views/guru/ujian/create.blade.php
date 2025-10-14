@@ -273,16 +273,16 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function () {
+    document.addEventListener('DOMContentLoaded', function () {
         // === 1. Inisialisasi Select2 untuk Mata Pelajaran ===
-        $('#mapel_id').select2({
+        const mapelSelect = new Option2(document.getElementById('mapel_id'), {
             placeholder: "Pilih Mata Pelajaran",
             allowClear: false,
             theme: 'default'
         });
 
         // === 2. Inisialisasi Select2 untuk Kelas (Multiple Select) ===
-        $('#kelas_id').select2({
+        const kelasSelect = new Option2(document.getElementById('kelas_id'), {
             placeholder: "Pilih Kelas (bisa pilih lebih dari satu)",
             allowClear: true,
             multiple: true,
@@ -290,65 +290,398 @@
             width: '100%'
         });
 
-        // === 3. Validasi form submit ===
-        $('#ujian-form').on('submit', function (e) {
+        // Helper function untuk Select2 initialization dengan vanilla JS
+        function Option2(element, options) {
+            // Wrapper untuk menggunakan Select2 dengan vanilla JS
+            if (window.jQuery) {
+                window.jQuery(element).select2(options);
+            }
+        }
+
+        // === 3. Validasi form submit dengan SweetAlert ===
+        const ujianForm = document.getElementById('ujian-form');
+        ujianForm.addEventListener('submit', function (e) {
+            e.preventDefault(); // Prevent default submission
+            
             let hasError = false;
+            const form = this;
 
             // validasi kelas
-            const selectedKelas = $('#kelas_id').val();
+            const kelasIdSelect = document.getElementById('kelas_id');
+            const selectedKelas = Array.from(kelasIdSelect.selectedOptions).map(option => option.value);
+            
             if (!selectedKelas || selectedKelas.length === 0) {
-                e.preventDefault();
                 hasError = true;
-                if (!$('#kelas-error').length) {
-                    $('#kelas_id').parent().append('<p id="kelas-error" class="mt-1 text-sm text-red-600">Silakan pilih minimal satu kelas untuk ujian ini.</p>');
+                const existingError = document.getElementById('kelas-error');
+                if (!existingError) {
+                    const errorElement = document.createElement('p');
+                    errorElement.id = 'kelas-error';
+                    errorElement.className = 'mt-1 text-sm text-red-600';
+                    errorElement.textContent = 'Silakan pilih minimal satu kelas untuk ujian ini.';
+                    kelasIdSelect.parentElement.appendChild(errorElement);
                 }
             } else {
-                $('#kelas-error').remove();
+                const existingError = document.getElementById('kelas-error');
+                if (existingError) {
+                    existingError.remove();
+                }
             }
 
             // validasi durasi
-            const durasi_jam = parseInt($('input[name="durasi_jam"]').val()) || 0;
-            const durasi_menit = parseInt($('input[name="durasi_menit"]').val()) || 0;
+            const durasiJamInput = document.querySelector('input[name="durasi_jam"]');
+            const durasiMenitInput = document.querySelector('input[name="durasi_menit"]');
+            const durasi_jam = parseInt(durasiJamInput.value) || 0;
+            const durasi_menit = parseInt(durasiMenitInput.value) || 0;
 
             if (durasi_jam === 0 && durasi_menit === 0) {
-                e.preventDefault();
                 hasError = true;
-                if (!$('#durasi-error').length) {
-                    $('input[name="durasi_menit"]').parent().parent().append('<p id="durasi-error" class="mt-1 text-sm text-red-600">Durasi ujian harus lebih dari 0 menit.</p>');
+                const existingError = document.getElementById('durasi-error');
+                if (!existingError) {
+                    const errorElement = document.createElement('p');
+                    errorElement.id = 'durasi-error';
+                    errorElement.className = 'mt-1 text-sm text-red-600';
+                    errorElement.textContent = 'Durasi ujian harus lebih dari 0 menit.';
+                    durasiMenitInput.parentElement.parentElement.appendChild(errorElement);
                 }
-                $('input[name="durasi_jam"]').addClass('border-red-500');
-                $('input[name="durasi_menit"]').addClass('border-red-500');
+                durasiJamInput.classList.add('border-red-500');
+                durasiMenitInput.classList.add('border-red-500');
             } else {
-                $('#durasi-error').remove();
-                $('input[name="durasi_jam"]').removeClass('border-red-500');
-                $('input[name="durasi_menit"]').removeClass('border-red-500');
+                const existingError = document.getElementById('durasi-error');
+                if (existingError) {
+                    existingError.remove();
+                }
+                durasiJamInput.classList.remove('border-red-500');
+                durasiMenitInput.classList.remove('border-red-500');
             }
 
+            // Jika ada error validasi, tampilkan SweetAlert error
             if (hasError) {
-                showNotification('Mohon lengkapi semua field yang wajib diisi.', 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Formulir Belum Lengkap!',
+                    text: 'Mohon lengkapi semua field yang wajib diisi sebelum melanjutkan.',
+                    confirmButtonText: 'OK, Saya Mengerti',
+                    confirmButtonColor: '#dc2626',
+                    customClass: {
+                        confirmButton: 'px-6 py-2 text-white font-medium rounded-lg',
+                    }
+                });
                 return false;
+            }
+
+            // Jika validasi berhasil, langsung submit dengan loading
+            Swal.fire({
+                icon: 'info',
+                title: 'Membuat Ujian...',
+                text: 'Mohon tunggu sebentar, sistem sedang memproses data ujian Anda.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Submit form dengan fetch API untuk handling response
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json().catch(() => {
+                        // Jika bukan JSON, redirect ke halaman sukses
+                        window.location.href = response.url || "{{ route('guru.ujian.index') }}";
+                        return null;
+                    });
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            })
+            .then(data => {
+                if (data) {
+                    // Handle JSON response (success)
+                    const namaUjian = document.querySelector('input[name="nama_ujian"]').value;
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Ujian Berhasil Dibuat! 🎉',
+                        html: `
+                            <div class="text-center space-y-3">
+                                <p class="text-lg">Ujian <strong>"${namaUjian}"</strong> telah berhasil dibuat.</p>
+                                <p class="text-sm text-gray-600">Anda sekarang dapat menambahkan soal-soal untuk ujian ini.</p>
+                            </div>
+                        `,
+                        confirmButtonText: '➤ Tambah Soal Sekarang',
+                        confirmButtonColor: '#059669',
+                        showCancelButton: true,
+                        cancelButtonText: 'Kembali ke Daftar Ujian',
+                        cancelButtonColor: '#6b7280',
+                        customClass: {
+                            confirmButton: 'px-6 py-2 text-white font-medium rounded-lg mr-2',
+                            cancelButton: 'px-6 py-2 text-white font-medium rounded-lg',
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = data.redirect_url || "{{ route('guru.soal.create') }}";
+                        } else {
+                            window.location.href = "{{ route('guru.ujian.index') }}";
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Handle error scenarios
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Membuat Ujian!',
+                    html: `
+                        <div class="text-center space-y-3">
+                            <p>Terjadi kesalahan saat memproses data ujian.</p>
+                            <p class="text-sm text-gray-600">Error: ${error.message}</p>
+                            <br>
+                            <p class="text-sm">Silakan coba lagi atau hubungi administrator jika masalah berlanjut.</p>
+                        </div>
+                    `,
+                    confirmButtonText: '🔄 Coba Lagi',
+                    confirmButtonColor: '#dc2626',
+                    showCancelButton: true,
+                    cancelButtonText: 'Kembali',
+                    cancelButtonColor: '#6b7280',
+                    customClass: {
+                        confirmButton: 'px-6 py-2 text-white font-medium rounded-lg mr-2',
+                        cancelButton: 'px-6 py-2 text-white font-medium rounded-lg',
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // User wants to try again, do nothing (stay on form)
+                    } else {
+                        window.location.href = "{{ route('guru.ujian.index') }}";
+                    }
+                });
+            });
+        });
+
+        // === 4. Weather Alert saat memilih jadwal ujian ===
+        const jadwalInput = document.getElementById('jadwal');
+        let lastCheckedDate = null;
+        
+        jadwalInput.addEventListener('change', function() {
+            const selectedDateTime = new Date(this.value);
+            const selectedDate = selectedDateTime.toDateString();
+            
+            // Hanya cek weather jika tanggal berbeda dari yang sebelumnya
+            if (selectedDate !== lastCheckedDate && this.value) {
+                lastCheckedDate = selectedDate;
+                checkWeatherForExamDate(selectedDateTime);
             }
         });
 
-        // === 4. Fungsi notifikasi toast ===
-        function showNotification(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-            const toast = $(`
-                <div class="fixed top-4 right-4 z-50 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300">
-                    <div class="flex items-center">
-                        <span>${message}</span>
-                        <button class="ml-4 text-white hover:text-gray-200" onclick="$(this).closest('div').addClass('translate-x-full').delay(300).queue(function(){$(this).remove();})">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            `);
+        function checkWeatherForExamDate(examDate) {
+            // Tampilkan loading weather info
+            const loadingToast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
 
-            $('body').append(toast);
-            setTimeout(() => toast.removeClass('translate-x-full'), 100);
-            setTimeout(() => toast.addClass('translate-x-full').delay(300).queue(function () { $(this).remove(); }), 3000);
+            loadingToast.fire({
+                icon: 'info',
+                title: 'Mengecek kondisi cuaca...'
+            });
+
+            // Fetch weather data
+            fetch('/weather-api', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.weather) {
+                    showWeatherAlert(data.weather, data.city, examDate);
+                } else {
+                    // Jika gagal mendapat data cuaca
+                    const errorToast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+
+                    errorToast.fire({
+                        icon: 'warning',
+                        title: 'Tidak dapat mengecek cuaca saat ini'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Weather check error:', error);
+            });
+        }
+
+        function showWeatherAlert(weather, city, examDate) {
+            const temperature = weather.Temperature?.Metric?.Value;
+            const weatherText = weather.WeatherText;
+            const weatherIcon = weather.WeatherIcon;
+            
+            const examDateStr = examDate.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const examTimeStr = examDate.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Tentukan pesan berdasarkan kondisi cuaca
+            let weatherAdvice = '';
+            let alertIcon = 'info';
+            let alertColor = '#3b82f6';
+
+            if (weatherText && weatherText.toLowerCase().includes('rain') || 
+                weatherText && weatherText.toLowerCase().includes('hujan')) {
+                weatherAdvice = `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-3">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-800">Perhatian: Cuaca Hujan</h3>
+                                <div class="mt-2 text-sm text-yellow-700">
+                                    <p>• Jaringan internet mungkin tidak stabil</p>
+                                    <p>• Pastikan backup power/UPS tersedia</p>
+                                    <p>• Siapkan rencana kontinjensi untuk siswa</p>
+                                    <p>• Pertimbangkan perpanjangan waktu ujian jika diperlukan</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                alertIcon = 'warning';
+                alertColor = '#f59e0b';
+            } else if (temperature && temperature > 32) {
+                weatherAdvice = `
+                    <div class="bg-red-50 border-l-4 border-red-400 p-3 mt-3">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Cuaca Sangat Panas</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <p>• Pastikan ruang ujian ber-AC atau ventilasi baik</p>
+                                    <p>• Sediakan air minum untuk siswa</p>
+                                    <p>• Monitor kondisi siswa selama ujian</p>
+                                    <p>• Perangkat elektronik mungkin overheat</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                alertIcon = 'warning';
+                alertColor = '#ef4444';
+            } else if (temperature && temperature < 18) {
+                weatherAdvice = `
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-blue-800">Cuaca Dingin</h3>
+                                <div class="mt-2 text-sm text-blue-700">
+                                    <p>• Pastikan ruang ujian hangat dan nyaman</p>
+                                    <p>• Siswa mungkin memerlukan jaket atau selimut</p>
+                                    <p>• Perangkat elektronik performa optimal di suhu dingin</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                alertIcon = 'info';
+                alertColor = '#3b82f6';
+            } else {
+                weatherAdvice = `
+                    <div class="bg-green-50 border-l-4 border-green-400 p-3 mt-3">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800">Kondisi Cuaca Ideal</h3>
+                                <div class="mt-2 text-sm text-green-700">
+                                    <p>• Suhu dan kondisi mendukung untuk pelaksanaan ujian</p>
+                                    <p>• Lingkungan kondusif untuk konsentrasi siswa</p>
+                                    <p>• Minimal gangguan dari faktor cuaca</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                alertIcon = 'success';
+                alertColor = '#10b981';
+            }
+
+            Swal.fire({
+                icon: alertIcon,
+                title: `Informasi Cuaca untuk Ujian`,
+                html: `
+                    <div class="text-left space-y-3">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">📅 ${examDateStr}</h4>
+                                    <p class="text-sm text-gray-600">Pukul ${examTimeStr}</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="flex items-center gap-2">
+                                        <img src="https://developer.accuweather.com/sites/default/files/${String(weatherIcon).padStart(2, '0')}-s.png" 
+                                             alt="Weather" class="w-8 h-8" onerror="this.style.display='none'">
+                                        <div>
+                                            <div class="text-lg font-bold">${temperature}°C</div>
+                                            <div class="text-xs text-gray-500">${city}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mt-2">
+                                <strong>Kondisi:</strong> ${weatherText}
+                            </p>
+                        </div>
+                        ${weatherAdvice}
+                    </div>
+                `,
+                confirmButtonText: 'Mengerti',
+                confirmButtonColor: alertColor,
+                customClass: {
+                    confirmButton: 'px-6 py-2 text-white font-medium rounded-lg',
+                    popup: 'max-w-lg'
+                },
+                width: '500px'
+            });
         }
     });
 </script>

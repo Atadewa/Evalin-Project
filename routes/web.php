@@ -60,4 +60,5 @@ Route::middleware(['auth', 'role:siswa'])->group(function () {
 });
 
 Route::get('/weather', [WeatherController::class, 'padangWeather']);
+Route::get('/weather-api', [WeatherController::class, 'getWeatherApi']);
 require __DIR__ . '/auth.php';
