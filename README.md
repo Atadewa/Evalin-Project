@@ -1,66 +1,176 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# EVALIN - Sistem Ujian Online
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+<div align="center">
+  <img src="public/images/logo-evalin.png" alt="Evalin Logo" width="200">
+  
+  <p><strong>Aplikasi Ujian dengan Koreksi Otomatis Berbasis LLM</strong></p>
+  
+  [![Laravel](https://img.shields.io/badge/Laravel-11.31-red?style=flat&logo=laravel)](https://laravel.com)
+  [![PHP](https://img.shields.io/badge/PHP-8.2+-blue?style=flat&logo=php)](https://php.net)
+</div>
 
-## About Laravel
+## 📝 Tentang Evalin
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**EVALIN** adalah platform sistem ujian online yang dirancang khusus untuk memudahkan proses evaluasi pembelajaran di era digital. Sistem ini menyediakan solusi lengkap untuk mengelola ujian online dengan dukungan **dua jenis soal**: **pilihan ganda** dan **esai** yang dilengkapi dengan **sistem koreksi esai otomatis berbasis LLM (Large Language Model)** yang transparan dan efisien.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 🎯 Tujuan Proyek
+- Digitalisasi proses ujian dan evaluasi pembelajaran dengan dukungan AI
+- Meningkatkan efisiensi dalam pengelolaan ujian dan penilaian esai
+- Menyediakan sistem penilaian yang akurat, transparan, dan konsisten berbasis LLM
+- Memfasilitasi pembelajaran jarak jauh dengan tools evaluasi yang handal dan modern
+- Mengotomatisasi proses koreksi esai untuk menghemat waktu guru
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🖼️ Preview Aplikasi
 
-## Learning Laravel
+<div align="center">
+  <img src="public/images/guru-jadwal-ujian-page.png" alt="Preview Evalin" width="800">
+  <p><em>Dashboard Manajemen Ujian untuk Guru</em></p>
+</div>
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## ⚡ Fitur Utama
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 👨‍🏫 Untuk Guru
+- **Manajemen Ujian**: Buat, edit, dan kelola ujian pilihan ganda & esai dengan mudah
+- **Bank Soal**: Import dan kelola soal dalam format CSV (pilihan ganda dan esai)
+- **Penjadwalan**: Atur jadwal ujian dengan fleksibel
+- **Koreksi Otomatis LLAMA**: Sistem koreksi esai otomatis berbasis Meta's LLAMA yang transparan
+- **Monitoring Real-time**: Pantau progress siswa secara langsung
+- **Export Hasil**: Download hasil ujian dalam format PDF/Excel
+- **Manajemen Kelas**: Kelola siswa dan kelas dengan efisien
+- **Review AI Assessment**: Tinjau dan validasi hasil penilaian AI untuk esai
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 👨‍🎓 Untuk Siswa
+- **Interface Ujian Modern**: Antarmuka yang clean untuk soal pilihan ganda dan esai
+- **Auto-save**: Jawaban tersimpan otomatis untuk kedua jenis soal
+- **Timer Management**: Pengelolaan waktu ujian yang akurat
+- **Text Editor Esai**: Editor teks yang nyaman untuk menjawab soal esai
+- **Hasil Instan**: Lihat hasil ujian secara real-time (pilihan ganda langsung, esai setelah AI assessment)
+- **History Ujian**: Riwayat ujian dan nilai yang telah dikerjakan
+- **Feedback Transparan**: Melihat detail penilaian AI untuk jawaban esai
 
-## Laravel Sponsors
+### 🔧 Untuk Administrator
+- **User Management**: Kelola akun guru dan siswa
+- **System Monitoring**: Monitor kinerja sistem dan AI assessment
+- **LLAMA Configuration**: Konfigurasi model LLAMA untuk koreksi esai
+- **Backup Data**: Backup dan restore data sistem
+- **Laporan Komprehensif**: Generate laporan sistem dan analisis AI performance
+- **Quality Control**: Monitor akurasi dan konsistensi penilaian AI
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
 
-### Premium Partners
+## 🤖 Fitur AI-Powered Assessment
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Koreksi Esai Otomatis
+- **LLAMA Integration**: Menggunakan Meta's LLAMA (Large Language Model Meta AI) untuk penilaian esai yang akurat
+- **Rubrik Penilaian**: Sistem penilaian berdasarkan kriteria yang dapat disesuaikan
+- **Transparansi**: Setiap penilaian AI disertai dengan penjelasan dan reasoning
+- **Consistency**: Penilaian yang konsisten tanpa bias subjektif menggunakan LLAMA
+- **Speed**: Koreksi instan untuk ratusan jawaban esai sekaligus dengan performa LLAMA
 
-## Contributing
+### Keunggulan AI Assessment
+- **Objektif**: Penilaian berdasarkan kriteria yang telah ditetapkan
+- **Scalable**: Dapat menangani volume ujian yang besar
+- **Detailed Feedback**: Memberikan feedback konstruktif untuk siswa
+- **Quality Assurance**: Sistem validasi untuk memastikan akurasi penilaian
+- **Audit Trail**: Jejak digital untuk setiap keputusan penilaian AI
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🛠️ Tech Stack
 
-## Code of Conduct
+<div align="center">
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Backend
+<img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel">
+<img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
 
-## Security Vulnerabilities
+### AI & Machine Learning
+<img src="https://img.shields.io/badge/LLAMA-FF6B35?style=for-the-badge&logo=meta&logoColor=white" alt="LLAMA">
+<img src="https://img.shields.io/badge/Meta_AI-0467DF?style=for-the-badge&logo=meta&logoColor=white" alt="Meta AI">
+<img src="https://img.shields.io/badge/AI_Assessment-4ECDC4?style=for-the-badge&logo=robot&logoColor=white" alt="AI Assessment">
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Frontend
+<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+<img src="https://img.shields.io/badge/Alpine.js-8BC34A?style=for-the-badge&logo=alpine.js&logoColor=white" alt="Alpine.js">
+<img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
 
-## License
+### Tools & Libraries
+<img src="https://img.shields.io/badge/Composer-885630?style=for-the-badge&logo=composer&logoColor=white" alt="Composer">
+<img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm">
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+</div>
+
+## 🚀 Instalasi
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/Atadewa/Evalin-Project.git
+cd Evalin-Project
+```
+
+### 2. Install Dependencies
+```bash
+# Install PHP dependencies
+composer install
+
+# Install Node.js dependencies
+npm install
+```
+
+### 3. Environment Setup
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Generate application key
+php artisan key:generate
+```
+
+### 4. Database Configuration
+Edit file `.env` dan sesuaikan konfigurasi database:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=evalin_db
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
+
+### 5. Database Migration & Seeding
+```bash
+# Run migrations
+php artisan migrate
+
+# Run seeders (optional)
+php artisan db:seed
+```
+
+### 6. Build Assets
+```bash
+# Development
+npm run dev
+
+# Production
+npm run build
+```
+
+### 7. Run Application
+```bash
+# Development server
+php artisan serve
+
+# Or using the dev script (recommended)
+composer run dev
+```
+
+Aplikasi akan berjalan di `http://localhost:8000`
+
+
+## 📊 Database Schema
+
+### Models Utama:
+- **User**: Manajemen pengguna (Admin, Guru, Siswa)
+- **Ujian**: Data ujian dan konfigurasi (pilihan ganda & esai)
+- **Soal**: Bank soal dengan opsi jawaban dan rubrik penilaian esai
+- **JawabanSiswa**: Jawaban siswa dan penilaian (manual & AI-generated)
+- **Kelas**: Manajemen kelas dan mata pelajaran
+- **UjianSiswa**: Relasi ujian dengan siswa
