@@ -1,7 +1,7 @@
 # EVALIN - Sistem Ujian Online
 
 <div align="center">
-  <img src="public/images/logo-evalin.png" alt="Evalin Logo" width="300">
+  <img src="public/images/logo-evalin.png" alt="Evalin Logo" width="250">
   
   <br>
   
@@ -22,7 +22,7 @@
 ## 🖼️ Preview Aplikasi
 
 <div align="center">
-  <img src="public/images/guru-jadwal-ujian-page.png" alt="Preview Evalin" width="800" style="border: 1px solid black;">
+  <img src="public/images/guru-jadwal-ujian-page.png" alt="Preview Evalin" width="800" style="border: 2px solid black;">
   <p><em>Dashboard Manajemen Ujian untuk Guru</em></p>
 </div>
 
