@@ -1,12 +1,11 @@
 # EVALIN - Sistem Ujian Online
 
 <div align="center">
-  <img src="public/images/logo-evalin.png" alt="Evalin Logo" width="200">
+  <img src="public/images/logo-evalin.png" alt="Evalin Logo" width="300">
+  
+  <br>
   
   <p><strong>Aplikasi Ujian dengan Koreksi Otomatis Berbasis LLM</strong></p>
-  
-  [![Laravel](https://img.shields.io/badge/Laravel-11.31-red?style=flat&logo=laravel)](https://laravel.com)
-  [![PHP](https://img.shields.io/badge/PHP-8.2+-blue?style=flat&logo=php)](https://php.net)
 </div>
 
 ## 📝 Tentang Evalin
@@ -23,7 +22,7 @@
 ## 🖼️ Preview Aplikasi
 
 <div align="center">
-  <img src="public/images/guru-jadwal-ujian-page.png" alt="Preview Evalin" width="800">
+  <img src="public/images/guru-jadwal-ujian-page.png" alt="Preview Evalin" width="800" style="border: 1px solid black;">
   <p><em>Dashboard Manajemen Ujian untuk Guru</em></p>
 </div>
 
